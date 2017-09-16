@@ -1,0 +1,1 @@
+Requires: funimation-downloader-nx (https://github.com/seiya-dev/funimation-downloader-nx) and Crunchy (https://github.com/Godzil/Crunchy)
