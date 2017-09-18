@@ -1,56 +1,58 @@
 #!/bin/bash
 # Awatsuki DPS - Automated Anime Downloader
-
-# CrunchyRoll
-cr_watch="watchlist.cr"
-cr_user="user@email.com"
-cr_pass="password"
-cr_base="http://www.crunchyroll.com"
-#FunimationNow
-funi_watch="watchlist.funi"
-funi_user="user@email.com"
-funi_pass="password"
-#Storage
-stor="/dir/"
-tmp=""
-
+crunchyroll() {
 #Get CrunchyRoll Series
+echo "= CrunchyRoll ==========================================="
 while read -r show; do
-  [[ $line = \#* ]] && continue
-  crunchy -u ${cr_user} -p ${cr_pass} -o ${stor} ${cr_base}/${show}
-  sleep 30
-done < "$cr_watch"
-
+  [[ ! $show = \#* ]] && ${exec_crunchy} -u ${cr_user} -p ${cr_pass} -o ${stor} ${cr_base}/${show}; echo "========================================================"; sleep 30
+done < "${1}"
+}
+funimation() {
 #Get Funimation Series
 echo "= FunimationNow ========================================="
 echo "Authenticating....."
-#cd /opt/funimation-downloader-nx
-/usr/bin/nodejs /opt/funimation-downloader-nx/scripts/funidl.js --mail ${funi_user} --pass ${funi_pass}
+node ${exec_funidl} --mail ${funi_user} --pass ${funi_pass}
 while read -r show; do
-  [[ $show = \#* ]] && continue
-  echo "Preparing data....."
-  show_id=$(echo $show | awk -F '[;]' '{print $1}')
-  lang=$(echo $show | awk -F '[;]' '{print $2}')
-  series_meta=$(/usr/bin/nodejs /opt/funimation-downloader-nx/scripts/funidl.js -s ${show_id} | tail -2 | head -1)
-  series_name=$(echo ${series_meta:6} | awk -F '[-]' '{print $1}' |  while read spo; do echo ${spo}; done)
-  last_epid=${series_meta:1:4}
-  last_local_ep="00"
-  if [ ! -d "${stor}${series_name}/" ]; then mkdir -p "${stor}${series_name}/" ;fi
-  if [ ! $(find "${stor}${series_name}/[Funimation]"* -printf "%f\n" | wc -l) = 0 ]; then last_local_ep=$(find "${stor}${series_name}/[Funimation]"* -printf "%f\n" | tail -1| awk -F '[-]' '{print $2}' | while read spo; do echo ${spo:0:2}; done); fi
-  echo "$series_name [$show_id]"
-  echo "Latest Episode: $last_epid - Current Episode: $last_local_ep"
+  if [[ ! $show = \#* ]]; then
+    echo "Preparing data....."
+    show_id=$(echo $show | awk -F '[;]' '{print $1}') # Parse Show ID Number
+	# Get Show ID buy using : funi --search "Show Name"
+    lang=$(echo $show | awk -F '[;]' '{print $2}') # Parse Show Language - en or jp
+    quality=$(echo $show | awk -F '[;]' '{print $3}') # Quality of Video - 1080p, 720p, etc.
+    series_meta=$(node ${exec_funidl} -s ${show_id} | tail -2 | head -1) # Get Latest Episode
+    series_name=$(echo ${series_meta:6} | awk -F '[-]' '{print $1}' |  while read spo; do echo ${spo}; done) # Get Show Full Name
+    last_epid=${series_meta:1:4} # Get the latest episodes number
+    last_local_ep="00" # Default Local Episode Number for if there being none alrady downloaded (Note how its a string and not a int)
+    if [ ! -d "${stor}${series_name}/" ]; then mkdir -p "${stor}${series_name}/" ;fi # Create folder if does not exsist
+    if [ ! $(find "${stor}${series_name}/[Funimation]"* -printf "%f\n" | wc -l) = 0 ]; then last_local_ep=$(find "${stor}${series_name}/[Funimation]"* -printf "%f\n" | tail -1| awk -F '[-]' '{print $2}' | while read spo; do echo ${spo:0:2}; done); fi
+	# Determin if any episods exsist on data storage, if so then get the last episodes number (Could be a problem later but a wc would not be any safer)
+    echo "$series_name: [$show_id]"
+    echo "Latest Episode: [${last_epid#0}] - Current Episode: [${last_local_ep#0}]"
 
-  while [ ! ${last_epid} -eq ${last_local_ep} ]
-  do
-    echo "Downloading episode $last_local_ep in $lang....."
-    last_local_ep=$(echo ${last_local_ep#0}+1 | bc)
-    if [ ${lang} = "en" ]; then /usr/bin/nodejs /opt/funimation-downloader-nx/scripts/funidl.js -q 1080p --nosubs --mkv -s ${show_id} --sel ${last_local_ep}
-    elif [ ${lang} = "jp" ]; then /usr/bin/nodejs /opt/funimation-downloader-nx/scripts/funidl.js -q 1080p --mkv --mks --sub -s ${show_id} --sel ${last_local_ep}
-    fi
-    echo "Moving video....."
-    mv /mnt/tmp/funi/videos/*.mkv "${stor}${series_name}/"
-  done
-
-
-  sleep 30
-done < "$funi_watch"
+    while [ ! ${last_epid} -eq ${last_local_ep} ]
+    do
+      echo "Downloading episode [${last_local_ep#0+1}] in [${lang}@${quality}]....."
+      last_local_ep=$(echo ${last_local_ep#0}+1 | bc)
+      if [ ${lang} = "en" ]; then node ${exec_funidl} -q ${quality} --nosubs --mkv -s ${show_id} --sel ${last_local_ep}
+      elif [ ${lang} = "jp" ]; then node ${exec_funidl} -q ${quality} --mkv --mks --sub -s ${show_id} --sel ${last_local_ep}
+      fi
+      echo "Moving downloads....."
+      mv ${tmp}*.mkv "${stor}${series_name}/"
+    done
+	echo "========================================================"
+    sleep 30
+  fi
+done < "${1}"
+}
+source ./get-anime.config
+while getopts "rcfC:F:" opt; do 
+  case $opt in
+    r) crunchyroll "${cr_watch}"; funimation "${funi_watch}";;
+	c) crunchyroll "${cr_watch}";;
+	f) funimation "${funi_watch}";;
+  	C) crunchyroll "${OPTARG}";;
+	F) funimation "${OPTARG}";;
+    \?) echo "[PEBKAC] WTF is -$OPTARG?, thats not a accepted option, Abort"; exit 1;;
+    :) echo "[PEBKAC] -$OPTARG requires an argument, Abort"; exit 1;;
+  esac
+done
