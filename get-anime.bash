@@ -11,8 +11,8 @@ while read -r show; do
 	elif [ ${type} = "d" ]; then ${exec_crunchy} -u ${cr_user} -p ${cr_pass} -o ${drama} ${cr_base}/${series}
 	fi
 	
-	echo "========================================================"
-	sleep 30
+	echo "========================================================="
+	sleep 2
   fi
 done < "${1}"
 }
@@ -48,8 +48,8 @@ while read -r show; do
       echo "Moving downloads....."
       mv ${tmp}*.mkv "${anime}${series_name}/"
     done
-	echo "========================================================"
-    sleep 30
+	echo "========================================================="
+    sleep 2
   fi
 done < "${1}"
 }
