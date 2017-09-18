@@ -4,7 +4,16 @@ crunchyroll() {
 #Get CrunchyRoll Series
 echo "= CrunchyRoll ==========================================="
 while read -r show; do
-  [[ ! $show = \#* ]] && ${exec_crunchy} -u ${cr_user} -p ${cr_pass} -o ${stor} ${cr_base}/${show}; echo "========================================================"; sleep 30
+  if [ ! $show = \#* ]; then
+    series=$(echo $show | awk -F '[;]' '{print $1}')
+	type=$(echo $show | awk -F '[;]' '{print $2}')
+	if [ ${type} = "a" ]; then ${exec_crunchy} -u ${cr_user} -p ${cr_pass} -o ${anime} ${cr_base}/${series}
+	elif [ ${type} = "d" ]; then ${exec_crunchy} -u ${cr_user} -p ${cr_pass} -o ${drama} ${cr_base}/${series}
+	fi
+	
+	echo "========================================================"
+	sleep 30
+  fi
 done < "${1}"
 }
 funimation() {
@@ -13,7 +22,7 @@ echo "= FunimationNow ========================================="
 echo "Authenticating....."
 node ${exec_funidl} --mail ${funi_user} --pass ${funi_pass}
 while read -r show; do
-  if [[ ! $show = \#* ]]; then
+  if [ ! $show = \#* ]; then
     echo "Preparing data....."
     show_id=$(echo $show | awk -F '[;]' '{print $1}') # Parse Show ID Number
 	# Get Show ID buy using : funi --search "Show Name"
@@ -23,8 +32,8 @@ while read -r show; do
     series_name=$(echo ${series_meta:6} | awk -F '[-]' '{print $1}' |  while read spo; do echo ${spo}; done) # Get Show Full Name
     last_epid=${series_meta:1:4} # Get the latest episodes number
     last_local_ep="00" # Default Local Episode Number for if there being none alrady downloaded (Note how its a string and not a int)
-    if [ ! -d "${stor}${series_name}/" ]; then mkdir -p "${stor}${series_name}/" ;fi # Create folder if does not exsist
-    if [ ! $(find "${stor}${series_name}/[Funimation]"* -printf "%f\n" | wc -l) = 0 ]; then last_local_ep=$(find "${stor}${series_name}/[Funimation]"* -printf "%f\n" | tail -1| awk -F '[-]' '{print $2}' | while read spo; do echo ${spo:0:2}; done); fi
+    if [ ! -d "${anime}${series_name}/" ]; then mkdir -p "${anime}${series_name}/" ;fi # Create folder if does not exsist
+    if [ ! $(find "${anime}${series_name}/[Funimation]"* -printf "%f\n" | wc -l) = 0 ]; then last_local_ep=$(find "${anime}${series_name}/[Funimation]"* -printf "%f\n" | tail -1| awk -F '[-]' '{print $2}' | while read spo; do echo ${spo:0:2}; done); fi
 	# Determin if any episods exsist on data storage, if so then get the last episodes number (Could be a problem later but a wc would not be any safer)
     echo "$series_name: [$show_id]"
     echo "Latest Episode: [${last_epid#0}] - Current Episode: [${last_local_ep#0}]"
@@ -37,7 +46,7 @@ while read -r show; do
       elif [ ${lang} = "jp" ]; then node ${exec_funidl} -q ${quality} --mkv --mks --sub -s ${show_id} --sel ${last_local_ep}
       fi
       echo "Moving downloads....."
-      mv ${tmp}*.mkv "${stor}${series_name}/"
+      mv ${tmp}*.mkv "${anime}${series_name}/"
     done
 	echo "========================================================"
     sleep 30

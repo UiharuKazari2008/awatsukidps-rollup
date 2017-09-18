@@ -1,8 +1,8 @@
-my-hero-academia
-gamers
-konosuba-gods-blessing-on-this-wonderful-world
-18if
-aho-girl
-teekyu
-dragon-ball-super
-in-another-world-with-my-smartphone
+my-hero-academia;a
+gamers;a
+konosuba-gods-blessing-on-this-wonderful-world;a
+18if;a
+aho-girl;a
+teekyu;a
+dragon-ball-super;a
+in-another-world-with-my-smartphone;a
